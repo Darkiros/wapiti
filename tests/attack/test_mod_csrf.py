@@ -32,7 +32,7 @@ async def test_csrf_cases():
 
     response = Response(
         httpx.Response(status_code=200),
-        url="http://127.0.0.1:65086/",
+        url="http://127.0.0.1:65086/"
     )
 
     request = Request("http://127.0.0.1:65086/")
@@ -63,6 +63,15 @@ async def test_csrf_cases():
     request.path_id = 4
     all_requests.append((request, response))
 
+    response = Response(
+        httpx.Response(status_code=200, headers={"x-csrf-token": "testestestest"}),
+        url="http://127.0.0.1:65086/"
+    )
+
+    request = Request("http://127.0.0.1:65086/", method="POST")
+    request.path_id = 5
+    all_requests.append((request, response))
+
     crawler_configuration = CrawlerConfiguration(Request("http://127.0.0.1:65086/"), timeout=1)
     async with AsyncCrawler.with_configuration(crawler_configuration) as crawler:
         options = {"timeout": 10, "level": 1}
@@ -83,5 +92,6 @@ async def test_csrf_cases():
         assert vulnerabilities == {
             (2, "CSRF token 'xsrf_token' is not properly checked in backend"),
             (3, "CSRF token 'xsrf_token' might be easy to predict"),
-            (4, "Lack of anti CSRF token")
+            (4, "Lack of anti CSRF token"),
+            (5, "CSRF token 'x-csrf-token' is not properly checked in backend"),
         }

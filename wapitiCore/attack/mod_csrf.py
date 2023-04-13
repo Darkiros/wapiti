@@ -69,6 +69,7 @@ class ModuleCsrf(Attack):
         return sum(e_x)
 
     def is_csrf_present(self, request: Request, response: Response):
+
         """Check whether anti-csrf token is present"""
         # Look for anti-csrf token in form params
         for param in request.post_params:
@@ -76,12 +77,19 @@ class ModuleCsrf(Attack):
                 self.csrf_string = param[0]
                 return param[1]
 
-        # Look for anti-csrf token in HTTP headers
+        # Look for anti-csrf token in HTTP response headers
         if response.headers:
             for header in response.headers:
                 if header.lower() in self.TOKEN_HEADER_STRINGS:
                     self.csrf_string = header
                     return response.headers[header]
+
+        # Look for anti-csrf token in HTTP request headers
+        if request.headers:
+            for header in request.headers:
+                if header.lower() in self.TOKEN_HEADER_STRINGS:
+                    self.csrf_string = header
+                    return request.headers[header]
 
         return None
 
@@ -134,8 +142,17 @@ class ModuleCsrf(Attack):
             link_depth=request.link_depth
         )
 
+        new_request = Request(
+            path=request.path,
+            method=request.method,
+            get_params=request.get_params,
+            post_params=request.post_params,
+            file_params=request.file_params,
+            referer=request.referer,
+            link_depth=request.link_depth)
+
         try:
-            response: Response = await self.crawler.async_send(request, follow_redirects=True)
+            response: Response = await self.crawler.async_send(new_request, follow_redirects=True)
         except RequestError:
             # We can't compare so act like it is secure
             self.network_errors += 1
